@@ -173,5 +173,4 @@
 * The more accidental barriers in software engineering tend to be related to how we go about writing and running software, and so can be broken down (unlike the essence of software engineering) with new tools and techniques. Examples include:  
   * High level languages: Enabling concepts to be expressed in a language closer to that of the human programmer has increased productivity enormously.  
   * Time-sharing: Reducing the latency in getting results has enabled programmers to maintain their focus on what really matters, rather than being distracted by the many events that can occur in a long compile-execute cycle.  
-  * Programming environments: These enabled the many aspects and tools of software engineering to be stitched together with ease. These tools were always capable of being used together, but in practice it was very difficult until environments came along.  
-* 
+  * Programming environments: These enabled the many aspects and tools of software engineering to be stitched together with ease. These tools were always capable of being used together, but in practice it was very difficult until environments came along.
