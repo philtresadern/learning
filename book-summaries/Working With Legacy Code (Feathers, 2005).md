@@ -1,4 +1,4 @@
-# Working With Legacy Code (Feathers, 2005\)
+# Working With Legacy Code (Feathers, 2005)
 
 Feathers defines "legacy code" as anything that is not sufficiently tested, and therefore difficult to change. This might be the case for old code, but it can also be the case for fresh-off-the-press code.
 
