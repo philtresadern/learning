@@ -96,4 +96,72 @@ it is many messages further on in the sequence.
 
 ## Transmission Control Protocol (TCP)
 
-[tbc]
+TCP is a connection-oriented transport protocol, meaning that a connection needs to be created between
+sender and receiver before data transmission takes place. (UDP just sends the data and hopes for the best.)
+
+The connection state resides entirely in the two end hosts and not in any of the intermediate hardware,
+provides a full-duplex service (transmission in both directions simultaneously), and is always between
+a single sender and a single receiver (no multicasting).
+
+The connection is initialized with a *three-way handshake*: the client initiates the connection by sending
+a 
+
+Once the connection is established, data is put into the send buffer for transmission (i.e., transfer to
+the network layer protocol). Segment size is limited by the *Maximum Segment Size (MSS)* parameter which
+can be estimated from the largest link-layer frame - the *Maximum Transmission Unit (MTU)* - minus 
+the size of TCP and IP headers.
+
+In addition to the application's payload data, a TCP segment contains a header (typically 20 bytes):
+
+* addresses of the source (2 bytes) and destination (2 bytes)
+* the sequence number (4 bytes): the index of the byte at which this segment starts
+* an acknowledgement number (4 bytes): the index of the next byte expected by the receiver (or, alternatively, the first byte it is yet to receive)
+* header length (4 bits)
+* a flag field (6 bits) to indicate True/False statuses:
+  * ACK: the acknowledgement field is valid
+  * RST:
+  * SYN:
+  * FIN:
+  * PSH: Pass data to the upper layer immediately
+  * URG: Sender has marked this as urgent
+* the receive window (2 bytes)
+* a checksum field (2 bytes)
+* an urgent data pointer (2 bytes) which indicates the last byte of urgent data
+
+and an options record (typically empty).
+
+The random offsets in the sequence and acknowledgement numbers reduce the risk that an old packet still in
+the system will be accepted as a packet in the current transmission, because its randomly offset sequence
+number will not align with the (differently offset) sequence/acknowledgement numbers in the current
+transmission. They are picked by the client and entered in the first packet.
+
+Note that the receiver can add its updated acknowledgement number to data returned to the sender such that
+it is *piggybacked* on the data segment without requiring a separate segment.
+
+Note that when a packet is lost from sender to receiver, the receiver's acknowledgement will be for the 
+missing packet regardless of whethr newer packets were successfully received. (These newer packets can be
+discarded or buffered as desired - usually discarded.)
+
+When determining an appropriate length for the timeout, TCP estimates the round trip time (RTT) and its
+variability via an exponential weighted moving average (a linear blend between the current estimate and 
+most recent sample). The timeout interval is then set to the estimated RTT plus four deviations.
+
+[The authors then show some scenarios such as a lost packet, a timeout before acknowledgements are received,
+and the loss of an acknowledgement after the next packet has already been sent.]
+
+When a timeout occurs, the timeout interval is typically doubled before resending the packet, implementing
+a form of congestion control.
+
+*Fast retransmit* occurs when an acknowledgment is received for the same packet for a fourth time. The first
+acknowledgment is expected, whereas the next three indicate that one packet was lost but three subsequent packets
+were received. Because this suggests that the network is not congested, it seems safe to quickly retransmit
+the lost packet rather than wait for the timeout.
+
+*Flow control* (different from *congestion control*) is added to avoid overflowing the receiver's data buffer
+by sending data quicker than the receiver can consume it. The sender maintains a *receive window* variable that 
+is provided by the receiver to indicate the amount of space in its receive buffer. The sender then needs to 
+ensure that the amount of unacknowledged data does not exceed this receive window by waiting to send any
+data that would overflow the receiver's buffer. If the receive window falls to zero, the sender stops sending.
+But, because the receiver will not send data unless there is data to send (or to acknowledge), it will not 
+update the sender when the window becomes available. The sender therefore continues to send 1-byte packets
+that the receiver can acknowledge, simply so that the sender can be updated on changes to the receive window.
