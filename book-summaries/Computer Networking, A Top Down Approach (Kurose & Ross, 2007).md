@@ -103,13 +103,13 @@ The connection state resides entirely in the two end hosts and not in any of the
 provides a full-duplex service (transmission in both directions simultaneously), and is always between
 a single sender and a single receiver (no multicasting).
 
-The connection is initialized with a *three-way handshake*: the client initiates the connection by sending
-a 
-
-Once the connection is established, data is put into the send buffer for transmission (i.e., transfer to
+After establishing the connection with a *three-way handshake* (see below), 
+data is put into the send buffer for transmission (i.e., transfer to
 the network layer protocol). Segment size is limited by the *Maximum Segment Size (MSS)* parameter which
 can be estimated from the largest link-layer frame - the *Maximum Transmission Unit (MTU)* - minus 
 the size of TCP and IP headers.
+
+### TCP Segment Structure
 
 In addition to the application's payload data, a TCP segment contains a header (typically 20 bytes):
 
@@ -119,9 +119,9 @@ In addition to the application's payload data, a TCP segment contains a header (
 * header length (4 bits)
 * a flag field (6 bits) to indicate True/False statuses:
   * ACK: the acknowledgement field is valid
-  * RST:
-  * SYN:
-  * FIN:
+  * RST: used in set up and tear down (though not specified where or how in this book)
+  * SYN: used to set up a connection
+  * FIN: used to tear down a connection
   * PSH: Pass data to the upper layer immediately
   * URG: Sender has marked this as urgent
 * the receive window (2 bytes)
@@ -157,7 +157,12 @@ acknowledgment is expected, whereas the next three indicate that one packet was 
 were received. Because this suggests that the network is not congested, it seems safe to quickly retransmit
 the lost packet rather than wait for the timeout.
 
-*Flow control* (different from *congestion control*) is added to avoid overflowing the receiver's data buffer
+### Flow Control
+
+*Flow control* is a way to control the rate of data transmission on account of the specific receiver's ability to process it.
+(It is therefore different from *congestion control* which controls the rate of data transmission on account
+of the ability of the whole network to carry it.) 
+Specifically, flow control is added to avoid overflowing the receiver's data buffer
 by sending data quicker than the receiver can consume it. The sender maintains a *receive window* variable that 
 is provided by the receiver to indicate the amount of space in its receive buffer. The sender then needs to 
 ensure that the amount of unacknowledged data does not exceed this receive window by waiting to send any
@@ -165,3 +170,146 @@ data that would overflow the receiver's buffer. If the receive window falls to z
 But, because the receiver will not send data unless there is data to send (or to acknowledge), it will not 
 update the sender when the window becomes available. The sender therefore continues to send 1-byte packets
 that the receiver can acknowledge, simply so that the sender can be updated on changes to the receive window.
+
+### The Three-Way Handshake
+
+1. The client sends the server a TCP segment (known as the *SYN segment*) with the SYN bit set to 1 and a random initial sequence number.
+2. The server receives (we hope!) the SYN segment, allocates buffers and variables, and returns a *SYNACK segment* in which the SYN bit is set, the acknowledgement number is set to the client's initial sequence number plus one, and the server's initial sequence number set to a random value. This acknowledges the request to the client, telling the client that the server can 'hear' it.
+3. The client receives the SYNACK segment, allocates its own buffers and variables, and returns the *ACK segment* in which the SYN bit is set back to 0, and the acknowledgement field is set to the server's initial sequence number plus one. This tells the server that the client can hear it. The connection is then established.
+
+The same three-way handshake is used to tear down the connection, only using the *FIN* bit of the segment header 
+to indicate the purpose of those segments.
+
+These handshakes are effectively managed as a state machine where each host passes through a sequence of states
+until they either reach the *ESTABLISHED* state or something goes wrong.
+
+This TWH is prone to an attack known as *SYN flooding* whereby the attacker sends many requests to set up the connection
+without acknowledging them. A naive server therefore keeps allocating buffers and variables in expectation of a
+connection, possibly until the server's resources are exhausted. Using *SYN cookies* and delaying resource allocation
+is a way to protect against this.
+
+## Congestion Control
+
+Congestion in a network (as opposed to in the buffers of a specific receiver, for which flow control is applied) 
+results in delayed and lost packets being received (in either direction or both). It has consequences that include:
+
+* large queueing delays as the packet arrival rate approaches the link capacity.
+* senders must retransmit packets that were lot due to buffer overflow at the receiver, increasing the overall levels of traffic in the network.
+* large delays due to congestion can result in packets being retransmitted unnecessarily, increasing congestion even more.
+* packets dropped in a downstream link in the path mean that the links further upstream have wasted their time that could have been spent transmitting other packets.
+
+*Network-assisted* congestion control depends on Network layer hardware sending signals (e.g., a *choke packet*)
+to end hosts telling them to ease off. These choke packets - known as *resource management cells* - are interspersed
+with data packets now and then, and contain bits to indicate the congestion status of the network.
+
+*End-to-end* congestion control, however, happens at the Transport layer (e.g., in the TCP protocol itself) as 
+an algorithmic detail. Specifically, it uses a *congestion window* variable, analogous to the 
+*receive window* value used in flow control, to limit the rate of data sending. The de facto limit is the minimum of 
+the receive window (determined by the receiver) and the congestion window (determined by the sender).
+
+The congestion window is adjusted in response to acknowledgements being received (increasing the size of the window and
+the data transmission limit) and packet loss detected via a timeout or duplicated ACKs (decreasing the size of the window
+and the data transmission limit). Specifically, the window size is increased by a variable amount 
+(*MSS* times *MSS*/*CongWin*) on every received acknowledgement
+such that the limit increases linearly, and halves the size of the window on every detected packet loss such that
+the limit decreases multiplicatively. The algorithm is thus known as *additive-increase, multiplicative decrease*.
+
+The only exception is at the very start where the window is set to one *MSS* in which the algorithm imposes a *slow start*
+but increases exponentially by increasing the congestion window size by one *MSS* on every acknowledgement (not every round trip).
+As the rate of packet sending (and acknowledgement) increases, the rate of window increase also increases until packet loss
+occurs and the linear increase is resumed.
+
+[It looks to me as though] a loss event due to a timeout is treated differently, always resulting in reversion to 
+the *slow start* and exponential regrowth rather than halving the size of the window. In some early algorithms, this
+was also the response to a triple duplicate *ACK* but newer algorithms halve the window in response to this because
+it is clear that some data is getting through at a reasonable rate so the network isn't totally congested.
+
+In this way, transmission is *throttled* in response to data loss but allowed to return to normal levels if the network
+permits it.
+
+One consequence of the algorithm is that it shares the use of a single link among multiple connections fairly (which isn't
+the case with UDP that can hog the bandwidth of a link). It also doesn't account for applications using multiple TCP connections
+in parallel, but that's another story.
+
+# The Network Layer
+
+The next layer - Network - concerns how packets are *forwarded* and *routed* across a network from one end host to another via
+a series of routers.
+
+*Forwarding* is what happens within a single router, receiving a packet on one port and deciding which port it should go out on.
+*Routing* is what happens within a network of routers, deciding the best series of routers to take out of the many possible
+options.
+
+Routers are little concerned with Transport and Application layers - they are a "Network and below" device.
+
+Routers contain a *forwarding table* that maps packet destination addresses (in the Transport layer header) to output ports on the router.
+(*Link-layer switches* use the header in the Link layer.) The forwarding table can be managed centrally or in a 
+decentralized fashion.
+
+A *Network Service Model* defines the guarantees that a service will provide (such as guaranteed delivery in a specific order) 
+and some models make more guarantees than others. The *Constant bit rate (CBR) ATM network service* makes strong promises about
+data transmission whereas the *Available bit rate (ABR) ATM network service* makes much weaker promises, and the 
+*Internet Protocol (IP)* makes almost no promises whatsoever.
+
+## Virtual Circuit and Datagram Networks
+
+A *Virtual Circuit* establishes a route between two hosts that is fixed for the duration of the connection. (I.e., traffic
+will flow through the same series of routers at all times.) The routers must therefore maintain information about the state
+of the VC (packets coming in on a known VC need to go to a specific port that is on the VC). Specifically, when a VC is 
+set up, its route is added to the forwarding table of every router on the path such that every router is aware of every VC
+in which it is involved. When the VC is torn down, its entries are deleted from the forwarding table of the routers involved.
+
+A *datagram network*, in contrast, maintain no state information about any connection and a router simply looks up the output port for
+every destination address in its forwarding table. Because a one-to-one mapping between addresses and ports would be impractical, 
+routers instead match only the *prefix* (the first N bits) of the address to a port on the understanding that addresses with 
+similar prefixes are likely to be on networks that are physically (or logically) close. Where an address matches more than one
+prefix, the longest (i.e., most specific) prefix is chosen as the match (the *longest prefix matching rule*).
+
+In a datagram network, routing algorithms update forwarding tables every few minutes such that, over the course of a
+transmission, packets may switch routes and therefore arrive in a different order to the order in which they were sent.
+
+By analogy, VCs look like phone networks: complex routing between two simple endpoints (phones). In contrast, a datagram
+networks uses simple routing to connect complex endpoints (client and server computers).
+
+## What's Inside a Router?
+
+A hardware router (which at one time might have just been a computer with multiple network cards) contains
+
+* input ports where data comes in
+* output ports where data goes out
+* switch fabric that connects input ports to output ports, possibly with a buffer in between
+* a routing processor that maintains the flow of data
+
+Each input port consists of the Physical-, Link- and Network-layer infrastructure to get a packet from pulses on a wire
+to a chunk of bits in memory. A physical port often handles input and output, and each port may reside on a *line card*
+with its own infrastructure to speed up packet switching.
+
+An input port should ideally be able to process its routing at *line speed* (i.e., in less time than it takes to receive a
+packet at the input port) so that processing takes place before the next packet has been received. However, modern demands
+require that this happens millions (or probably billions now) of times per second, leading to a number of briefly described
+approaches to fast switching.
+
+The switching fabric sends packets either through memory, or a shared bus, or an interconnection network, each with its
+own properties in terms of routing speed.
+
+## Where Does Queueing Occur?
+
+Queues can form at either the input port (if data is received faster than it is processed) or the output port (if data
+is processed faster than it can be sent, such as when packets arrive on many input ports simultaneously, all destined for
+the same output port). When packets are queued at the output port, a *packet scheduler* chooses which packet to send next
+and is therefore crucial for meeting quality-of-service guarantees.
+
+The scheduler may take a *first-come-first-served (FCFS)* approach or something more complex such as *weighted fair queueing (WFQ)*.
+Similarly, if a packet must be dropped the scheduler may choose the one just arriving (*drop-tail*) or another one in the
+queue based on some criteria. Together, this *Active Queue Management (AQM)* keeps data flowing one way or another.
+*Random Early Detection (RED)* maintains a weighted average length of the queue and drops packets at random with some 
+probability that is based on the estimated "fullness" of the queue; the more full the queue, the more likely a packet
+is to be dropped at random.
+
+One consequence of queueing is *head-of-the-line (HOL) blocking* whereby a packets in an input queue are blocked when
+the packet at the front of the queue cannot be transferred because the output queue is full, even though their 
+output ports are free.
+
+## The Internet Protocol (IP): Forwardindg and Addressing in the Internet
+
+[tbc]
