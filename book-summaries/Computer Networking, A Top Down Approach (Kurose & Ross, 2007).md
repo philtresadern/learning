@@ -113,7 +113,7 @@ the size of TCP and IP headers.
 
 In addition to the application's payload data, a TCP segment contains a header (typically 20 bytes):
 
-* addresses of the source (2 bytes) and destination (2 bytes)
+* port number of the source (2 bytes) and destination (2 bytes)
 * the sequence number (4 bytes): the index of the byte at which this segment starts
 * an acknowledgement number (4 bytes): the index of the next byte expected by the receiver (or, alternatively, the first byte it is yet to receive)
 * header length (4 bits)
@@ -129,6 +129,9 @@ In addition to the application's payload data, a TCP segment contains a header (
 * an urgent data pointer (2 bytes) which indicates the last byte of urgent data
 
 and an options record (typically empty).
+
+Note that the source and destination fields are port numbers only - no IP address, presumably because the IP
+address will be added by, well, IP in the Network layer. (Makes sense.)
 
 The random offsets in the sequence and acknowledgement numbers reduce the risk that an old packet still in
 the system will be accepted as a packet in the current transmission, because its randomly offset sequence
@@ -310,6 +313,126 @@ One consequence of queueing is *head-of-the-line (HOL) blocking* whereby a packe
 the packet at the front of the queue cannot be transferred because the output queue is full, even though their 
 output ports are free.
 
-## The Internet Protocol (IP): Forwardindg and Addressing in the Internet
+## The Internet Protocol (IP): Forwarding and Addressing in the Internet
 
-[tbc]
+There are two versions of the Internet Protocol: IPv4 and IPv6.
+
+An IPv4 datagram contains:
+
+* the version number (4 bits): 4, always, to distinguish it from IPv6
+* header length (4b): the datagram can include options, though these are usually empty which gives a header length of 20 bytes
+* Type of Service (TOS) (8b): what kind of data is being sent and whether it has specific requirements on speed and integrity
+* datagram length (16b): total number of bytes of data in the datagram (header + payload)
+* identifier (16b), flags (3b), fragmentation offset (13b): indicate whether a datagram was broken up (fragmented) and the order of the fragments
+* Time-to-live (TTL) (8b): number of hops before the datagram is dropped
+* protocol (8b): the Transport layer protocol to which the data should be delivered
+* header checksum (16b): a value to indicate errors in the datagram header only
+* source IP address (32b): the IP address of the source host
+* destination IP address (32b): IP address of the destination host
+* options (variable): not really considered here
+* data payload: the Transport layer segment to be delivered
+
+Because IP datagrams must be transmitted over a sequence of Link layer connections, the largest datagram that can be sent
+is limited in size by the smallest link layer frame along the route. If a datagram exceeds this Maximum Transmission Unit (MTU)
+then it must be broken up (fragmented), sent in pieces, and reassembled at the Network layer of the receiving end.
+Each datagram therefore uses the identifier field to uniquely identify a datagram; the flag field to indicate whether a datagram
+is part of a larger, fragmented datagram; and the fragmentation offset field to indicate the fragment's position in the sequence of
+fragments. The last fragment in a datagram sequence takes a flag value of 0 whereas preceding fragments take the value 1.
+An unfragmented datagram has a flag of 0 but also a fragmentation offset of 0 (whereas the final fragment would have a flag of 0
+and a nonzero offset). Fragmentation is useful but puts a burden on routers, and can also be a source of malicious behaviour.
+
+## IPv4 Addressing
+
+An IP address is technically associated with an *interface* rather than with the *host* or *router* containing that interface.
+The interface is the boundary between the physical connection and the logical host. (An ethernet port would be one interface; a
+wireless connection another; hosts typically use only one interface.)
+
+IP addresses come in *dotted-decimal notation* with four 8-bit numbers separated by dots, e.g., 213.64.127.12, and every 
+interface has its own unique IP address.
+
+A router has one interface for every physical connection such that a router with four physical sockets will have four interfaces
+and therefore four separate IP addresses (one per interface).
+
+A group of interfaces connected together form a *subnet* and all have IP addresses that start with the same n<32 bits (where
+the first n bits constitute the *prefix*). The number n is denoted by "/n" after an IP address (the *subnet mask*), 
+e.g., 213.64.127.0/24 indicates the subnet starting with the 24 bits 213.64.127 where the last 8 bits indicate the host in that
+subnet.
+
+"To determine the subnets in a network, detach each interface from its host or router, creating islands of isolated networks,
+with interfaces terminating the end points of the isolated network. Each of these isolated networks is a subnet."
+
+Each of a routers input/output ports will therefore belong to a different subnet, hence why each port has its own unique IP address.
+
+Addresses are assigned using *Classless Interdomain Routing (CIDR)* (pronounced "cider") whereby an ISP is allocated a range
+of addresses with a common prefix (like a subnet) and every organization whom the ISP serves gets the same prefix. The ISP is 
+then responsible for divvying up the pool among organizations. (Each organization might then be allocated a smaller pool of IP
+addresses by the ISP, and it is the organization's responsibility for divvying up that pool among its routers and hosts.)
+
+If an ISP acquires another ISP, forwarding rules can effectively merge the two ISPs as far as the outside world is concerned.
+
+(*Classful addressing* assigned prefixes in groups of 8, 16 or 24 bits, meaning that the next biggest pool available was
+255 times bigger than the one before. This coarse granularity meant that a lot of IP addresses were going unused. CIDR enables
+you to get a pool that is only twice as big when needed.)
+
+The Internet Corporation for Assigned Names and Numbers (ICANN) assigns IP address pools to organizations.
+
+When connecting to a subnet for the first time, a host must be allocated an IP address to access the network. This was once
+done manually before the *Dynamic Host Configuration Protocol (DHCP)* came along. Under DHCP:
+
+1. a host connects to the network and broadcasts a *DHCP server discover message* on special broadcast IP address 255.255.255.255 (sent to all hosts) using UDP port 67 with source address 0.0.0.0 (because it has no IP address yet)
+2. each DHCP server on the network receives the request and broadcasts a *DHCP server offer* containing the IP address of the DHCP server, an offered IP address for the host, a transaction ID and a lease time after which the IP address will have to be renewed
+3. the host will choose from the one or more offers and broadcast a *DHCP request* for the chosen IP address along with the IP address of the corresponding DHCP server (which, presumably, signals to the other DHCP servers that their offers are declined, and also disambiguates if two DHCP servers offer the same IP address)
+4. the selected DHCP server sends a *DHCP ACK* confirming that the IP address has been assigned.
+
+So far, we have assumed that every host has a unique IP address, though with only 4 billion to choose from this could easily now
+be exhausted. With many hosts/interfaces will reside on a Local Area Network, connected to one router that provides
+Internet services, *network address translation (NAT)* provides a simple way for many hosts, each with its own *private IP address*
+to share a single *public IP address* that is assigned to the router. (A private address lives on one of the three subdomains
+10.0.0.0/8, 172.16.0.0/12 or 192.168.0.0/16.)
+
+On the basis that each host will only use a few ports, with NAT the router maps a (source host's private IP, source port) tuple 
+to a (router's public IP, randomly chosen router port) tuple and uses this latter address as the source for the packet from the router.
+When the destination host replies with (router's public IP, router port) as the destination, the router reverses the mapping
+back to (source host's private IP, source port) and sends the response on its way to the host. In this way, the router turns
+"many hosts, few ports per host" into "one router, many ports per router" to demultiplex the incoming data.
+
+Critics of NAT say that a router shouldn't mess with Transport layer data (ports), but NAT has become a convenient way to 
+manage LANs without exhausting IP address pools. Peer-to-Peer also does not play well with NAT because a TCP connection is
+between a labelled source and a labelled destination, and NAT messes with the source IDs (IP address and port). UPnP patches this
+by providing a way for hosts to request a specific mapping that they can use to establish the TCP connection instead.
+
+## Internet Control Message Protocol (ICMP)
+
+A special type of message sent at the Network layer is the *Control Message*, used to indicate conditions and errors that may
+arise during transmission. Each ICMP packet contains one of 13 (type, code) pairs, each associated with a specific message
+(e.g., "Destination host unreachable"). A common use of ICMP is in the "ping" program that sends an (8,0) code to the destination
+host, requesting an echo response. The destination host might then send back a (0,0) echo response to the source, indicating that
+it is reachable.
+
+Another use of ICMP is in the Traceroute program that sends out a sequence of IP datagrams, each containing a UDP segment with an
+unlikely port number, where each datagram has a TTL value one greater than the last. (The first datagram has a TTL=1.) Each router
+along the path to the destination host therefore returns the packet (because the TTL is decremented at every hop until it reaches
+zero) until the packet that actually reaches the destination host who returns a (3,3) ICMP packet corresponding to "destination
+port unreachable". At this point, Traceroute knows it has found the endpoint of the route and stops transmitting packets. The returned
+packets include information containing the IP address of each router that returned the packet, and the round trip time to each
+router.
+
+## IPv6
+
+Based on experience with IPv4 and the limited number of IP addresses, IPv6 is taking over. IPv6 increases the bit-length of addresses
+to 128-bit (enough for every grain of sand to have an IP address) and ditches some of the less well-liked fields in the header.
+
+In particular, fragmentation is no longer a thing - a datagram that is too big is returned with a "too big" message (via ICMPv6)
+and the sending host is responsible for slicing it up. Checksums are also gone, again pushing error detection up the stack
+to higher layers. All of this reduces the load on routers that can focus on the task of routing.
+
+During the transition from IPv4 to IPv6, one approach was for devices to implement a *dual-stack* whereby datagrams could be sent
+and received in either IPv4 or IPv6, and every interface is required to have an address in both forms. In the case where two
+IPv6 nodes are linked by a route containing only IPv4 nodes, IPv4 must be used to traverse the *tunnel*. In this case, the IPv6
+node preceding the first IPv4-only node wraps the entire IPv6 datagram into an IPv4 datagram and sends it on its way. The first
+IPv6 node after the last IPv4 node in the tunnel then extracts the IPv6 datagram and sends it on its way.
+
+Finally, a protocol called IPsec (used in VPNs) sits between TCP/UDP and IP, securing data and the connection between the two hosts. 
+In a nutshell TCP/UDP passes its segment to IPsec that encrypts it and wraps it with a header, and passes this datagram to IP which wraps it 
+with the usual headers. At the receiving end, IPsec reverses the process to extract the sensitive data. (This will be covered in more
+detail later.)
