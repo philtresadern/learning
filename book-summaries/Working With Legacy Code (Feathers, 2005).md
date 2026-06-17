@@ -255,3 +255,12 @@ Extremely long (hundreds or thousands of lines) "Monster" Methods present a part
 
 Slightly less care is required if you have an automated refactoring tool that you can trust. (Most IDEs have one nowadays; if yours doesn't then switch to one that does.) When using automated refactoring tools to Extract Method, however, it is important that you use *only* the tool and make no manual changes yourself. This ensures that you can have confidence that the changes you make have already been checked (which won't be the case if you're changing code by hand yourself).
 
+# Dependency-Breaking Techniques
+
+These are refactorings with the specific intention of making it easy to introduce tests where no tests exist.
+
+* Adapt Parameter: Where an argument/parameter to a function is a complex class but only a small portion of the interface is used, wrap the class in a narrower interface that can be substituted with a simple fake.
+* Break-Out Method Object: Extract a complex class method as a class in its own right, passing the original class in as a parameter to access any instance variables or private methods (which will need to be exposed - shock! horror! - but this is a temporary measure to get tests in place before redesigning). The reference to the original class can then be faked to test the method object.
+* Definition completion: where declaration and definition are separated (e.g., in C++ .h and .cpp files, respectively) then reimplement the methods in the test file to simplify the test.
+* Encapsulate global references: where functions/methods access global variables, wrap the global variables in a class that can be faked in a test.
+* Expose static method: 
