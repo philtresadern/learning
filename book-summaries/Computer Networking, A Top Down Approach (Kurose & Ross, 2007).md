@@ -135,14 +135,57 @@ to make life difficult for you:
 * *packet sniffers* can listen in on your network traffic, looking for sensitive information
 * *IP spoofing* can trick your system into thinking it is communicating with a trusted host
 * *man-in-the-middle* attacks receive data on its route and modify it before sending it on in order to do damage
-* 
-
-
-
-
 
 # Application Layer
-[tbc]
+
+The application layer is of most importance to the application developer, being closest to the developers
+remit of work.
+
+In a (simplified) network application, there is usually an *always-on* server that responds to communication
+and one or more *sometimes-on* clients that initiate communication.
+
+The application or program runs on each host in a *process* and it is processes, not programs, that communicate
+with each other. 
+On a single machine, inter-process communication is relatively easy;
+over a network, it is much more complicated;
+the aim of the layered services architecture is to abstract away the complexity and make it look and feel as though the client and server processes were running on the same host.
+
+A process exchanges messages with the network via an interface called a *socket* which forms the passageway between
+the application layer and the transport layer. The socket can also be considered the network's *Application
+Programming Interface (API)*.
+
+An application passing data through the socket to the transport layer might require guaranteed delivery, in which case
+the transport layer service would have to provide *reliable data transfer* (e.g., TCP). 
+Or it might not, opting to prioritise real-time delivery instead (e.g., a phone or video call) in which case 
+the service (e.g., UDP) needn't worry about lost packets (a *loss-tolerant application*).
+
+Other applications might have constraints on throughput, timing or security that must be accommodated 
+by the transport layer service.
+
+When exchanging messages between processes on hosts, the host is identified by its *IP address*
+and the process by its *port number*. (Processes "listen* on a particular port to pick up messages that are
+indended for them.)
+
+Application layer protocols define how applications talk to each other without regard to how the data got from 
+the sender to the receiver. In particular, they specify:
+
+* the types of messages exchanged
+* the message syntax
+* the semantics (meaning) of the fields
+* rules for processing and responding to messages
+
+  ## The Web and HTTP
+
+  ## File Transfer: FTP
+
+  ## Electronic Mail
+
+  ## DNS - The Internet's Directory Service
+
+  ## Peer-to-Peer Applications
+
+  ## Socket Programming with TCP/UDP
+
 
 # Transport Layer
 Processes pass *messages* from the Application layer to the Transport layer via a socket. 
