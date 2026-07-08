@@ -1,5 +1,145 @@
 # Computer Networks and the Internet
-[tbc]
+
+The internet is a network of *end systems* or *hosts* - computers, smart phones, web cams, cars,
+and so on. 
+Hosts are connected via *packet switches* conected with *communication links*. 
+Data is sent along a *path* or *route* between hosts in *packets* at a specific *transmission rate*.
+Packet switches are typically either *routers* (that have an IP address) or 
+*link-layer switches* (that do not have an IP address).
+How the data is packaged and unpackaged along the way is determined by a variety of *protocols*,
+implemented by hosts and routers, that specify "the format and order of messages
+exchanged between two or more communicating entities, as well as the actions taken on the
+transmission and/or receipt of a message or other event".
+These protocols can be roughly organized in five layers
+(though the OSI model uses seven): Application, Transport, Network, Link and Physical
+
+## The Network Edge
+
+Hosts can often be classified as *client* or *server* where the server is typically a more
+powerful machine that serves many clients. Both the client and the server run their copy of the
+application (or program) which are, by definition, *distributed applications*.
+
+The closest router to a host (end system) is known as the *edge router* and is the first point
+of contact with the "edge" of the network. Hosts are connected to their edge router via an
+*access network*. Connections between nodes in the network can either by via *guided media*
+(e.g., cables, analogous to trains) or *unguided media* (e.g., wireless, analogous to helicopters).
+
+## The Network Core
+
+Networks can be either *circuit-switching* or *packet-switching*.
+In a circuit-switching network, the path is reserved and fixed for the duration of the transmission, 
+and this path is called the *circuit*. Because transmission has idle times (or *silent periods*), 
+circuit-switching networks are often considered to be wasteful or inefficient. A circuit can, however,
+be shared among transmissions via *frequency-division multiplexing (FDM)* or *time-division multiplexing (TDM)*.
+
+In a packet-switching network, the data is partitioned into packets that are sent independently across
+the network such that different packets in the same transmission might arrive at their destination via
+different routes (and therefore after different periods of time). Most packet switches use 
+*store-and-forward transmission* such that the whole packet must be received before it can be sent to the
+next node along the route. 
+Each packet switch has an *output buffer/queue* that can incur *queueing delays* while it waits for the
+output buffer to become free. If the buffer becomes completely full then *packet loss* might occur.
+
+Packet switches allocate resources based on demand, known as *statistical multiplexing*, so that different
+transmissions can share the links to and from the switch.
+
+### ISPs and Internet Backbones
+
+The internet is *a network of networks* organized into tiers.
+* *Tier 1 ISPs* are the Big Boys (Sprint, Verizon, etc.), handling huge amounts of internet traffic, 
+and are also known as *Internet backbone* networks. They cover many countries.
+* *Tier 2 ISPs* have national or regional coverage and connect to only a few Tier 1 ISPs. Tier 2 ISPs
+  are *customers* of the Tier 1 ISPs who are *providers* to the Tier 2 ISPs.
+* *Lower-tier ISPs* are the customers of Tier 2 ISPs.
+
+Two ISPs that are directly connected to each other are said to *peer* with each other.
+
+## Delay, Loss and Throughput
+
+Sending a packet between two hosts takes time. How much time depends on the *delays* and *losses* that
+occur, impacting the *throughput*.
+
+Node-to-node, a message will encounter the following delays:
+
+* processing delay: after a packet arrives at a router, it must be processed so that the router can decide
+  where to send it next. This processing delay is on the order of microseconds.
+* queueing delay: having decided where the packet should go, the packet is put in a queue until it is ready
+  to be transmitted. The time it spends in the queue - the *queueing delay* - depends on how many other
+  packets are in the queue, waiting to be sent.
+* transmission delay: this is the time between the first bit being put on the link and the last bit.
+  It depends on how many bits need sending, and how quickly each bit can be transmitted (i.e., the *bandwidth*).
+* propagation delay: this is the physical time it takes for a signal applied to one end of a link to be detected
+  at the other end. In a fibre optic cable, for example, it takes @~0.3e-8 seconds to travel one metre.
+  The propagation delay therefore depends on the medium and the length of the link.
+
+The total *nodal delay* is the sum of these four delays, and the total host-to-host delay
+is the sum of the nodal delays along the route.
+
+As *traffic intensity* - average rate of bits arriving at the queue divided by the transmission rate - increases, 
+queueing delays can become significant.
+
+If a packet arrives to find the input queue full, the router might *drop* the packet and
+*packet loss* occurs.
+
+*traceroute* is a program that will display the node-by-node route taken by a packet from
+one host to another, along with the nodal delay between each node, and is a vital tool in
+debugging excessive delays in transmission.
+
+*Throughput* is the rate at which bits can be received by host B from host A, and is typically 
+limited by the *bottleneck link* (i.e., the slowest connection between two nodes on the route).
+
+## Protocol Layers and Their Service Models
+
+When taking a flight, for example, you pass through a number of stages 
+(baggage check, passport control, gates, runway taxi) before takeoff.
+After landing, you typically go through the same stages in reverse:
+runway taxi, gates, passport control, baggage collection. 
+Stacking the stages in layers, you take a U-shaped path from end to end.
+
+The same thing applies in internet traffic. Protocols are organized in *layers*
+and each layer comes with a *service model* that specifies what services a layer 
+offers to the layer above. Protocols can be implemented in software or hardware,
+and there are often alternative protocols to choose from at each layer.
+
+These five layers transmit data in a unit that is named differently for each layer:
+
+* The *application* layer transmits *messages*
+* The *transport* layer transmits *segments*
+* The *network* layer transmits *datagrams*
+* The *link* layer transmits *frames*
+* The *physical* layer transmits *bits*
+
+As data travels *down* the stack, layer-specific headers are added to assist the
+services operating at that layer. As the data travels back up the stack at the 
+receiving end, the headers are stripped and used to control handling of the data
+on its way.
+
+Hosts operate at the application and transport layer; 
+routers operate at the network layer;
+switches operate at the link layer;
+cables and wires operate at the physical layer.
+
+## Networks Under Attack
+
+Networks are fertile ground for bad guys who will come up with neverending ways
+to make life difficult for you:
+
+* *malware* (often *self-replicating*) carries malicious software that can infect a host
+* a *botnet* takes over hosts and uses them for its own nefarious ends
+* *viruses* spread via user interaction
+* *worms* spread without any user interaction at all
+* *trojan horses* disguise themselves as reputable software while doing nasty things in the background
+* *denial-of-service (DoS)* attacks flood your host with traffic, rendering it unusable
+* *distributed DoS* attacks recruit other hosts to flood your host with even more traffic
+* *connection flooding* opens loads of connections to your host but leaves them open until no new connections can be made
+* *packet sniffers* can listen in on your network traffic, looking for sensitive information
+* *IP spoofing* can trick your system into thinking it is communicating with a trusted host
+* *man-in-the-middle* attacks receive data on its route and modify it before sending it on in order to do damage
+* 
+
+
+
+
 
 # Application Layer
 [tbc]
