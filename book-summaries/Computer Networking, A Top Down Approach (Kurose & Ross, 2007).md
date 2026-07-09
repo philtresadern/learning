@@ -174,18 +174,346 @@ the sender to the receiver. In particular, they specify:
 * the semantics (meaning) of the fields
 * rules for processing and responding to messages
 
-  ## The Web and HTTP
+## The Web and HTTP
 
-  ## File Transfer: FTP
+*HyperText Transfer Protocol (HTTP)* underpins the world wide web and determines
+how a webpage gets from the server to the client (your web browser).
 
-  ## Electronic Mail
+A *page* consists of *objects*, each of which has a URL with two parts:
+the *host* (e.g., http://www.myschool.ac.uk) 
+and the *path* (e.g., /myclass/class-photo.jpg).
 
-  ## DNS - The Internet's Directory Service
+When you load a web page, the client sends an HTTP *request* to the server
+and the server sends an HTTP *response*, containing the data requested, to 
+the client.
 
-  ## Peer-to-Peer Applications
+HTTP uses TCP as its transport protocol of choice, passing the request through
+the client's socket to TCP at the transport layer and from the server's transport
+layer to the server's web server application via the server's socket. 
+Sending the response does the same in reverse.
 
-  ## Socket Programming with TCP/UDP
+HTTP servers retain no information about the clients and is therefore said to be 
+a *stateless protocol*.
 
+HTTP can also use *non-persistent connections* (where the TCP connection serves a 
+single request/response transaction at a time) or *persistent connections* (where the
+TCP connection serves many transactions before closing).
+
+When using a non-persistent connection, the client might request a web page and, having
+received the HTML the TCP connection is closed. If the HTML links to several images
+or other documents, each object will be requested and received in turn with a new
+TCP connection opened and closed for every object. 
+Many TCP connections can, however, be operating in parallel for efficiency.
+
+When using a persistent connection, request/response transactions occur many times
+after a single initiating handshake, and the server typically closes the TCP connection
+after some period of inactivity.
+
+### HTTP Message Format
+
+A typical HTTP message looks like this:
+
+```
+GET /somedir/page.html HTTP/1.1
+Host: www.someschool.edu
+Connection: close
+User-agent: Mozilla/4.0
+Accept-language: fr
+```
+
+The first line is the *request line* and the remaining lines are *header lines*.
+For some methods (e.g., *POST*) there would be a blank line followed by the body
+of the message.
+
+The header lines specify:
+
+* which host the data is requested from which,
+  although implicit in the TCP connection used to send the request,
+  is included in the message for other uses (e.g,. Web proxy servers).
+* whether to close the connection after serving the request
+* what agent (client) will be presenting the data
+* what language is preferred
+
+Variables can also be included in the URL of a GET request, 
+using ? and = to specify key-value pairs, e.g.,
+GET /car-list?make=ford&model=fiesta
+
+The response typically takes the form:
+
+```
+HTTP/1.1 200 OK
+Connection: close
+Date: Thu, 07 Jul 2007 12:00:15 GMT
+Server: Apache/1.3.0 (Unix)
+Last-Modified: Sun, 6 May 2007 09:23:45 GMT
+Content-Length: 6821
+Content-Type: text/html
+
+(data data data data data data ...)
+```
+
+The first line is the *status line* that gives a code corresponding to
+the outcome of the request ("200 OK" in this case).
+There are then several *header lines* including:
+
+* Date: when the response was created
+* Server: analogous to the User-Agent field in the request
+* Last-Modified: when the data was last changed, which is crucial when caching
+* Content-Length: number of bytes in the data
+* Content-Type: how the data should be interpreted (independently of the file extension)
+
+Common statuses include 200 OK, 301 Moved Permanently, 400 Bad Request, 404 Not Found and 505 HTTP Version Not Supported.
+
+### Cookies
+
+HTTP is stateless such that no information about the client is stored on the server.
+Where user state would be beneficial, the server might respond to the first request 
+with an additional `Set-Cookie: 3141` header line in its response. 
+The client browser then adds the cookie number 3141 to its file for that user and
+server, and passes the cookie number into all subsequent requests to that server.
+The server application can then maintain a record of that user's interactions 
+via a backend database for a better user experience.
+
+### Web Caching
+
+Where the same data are repeatedly requested from a server (which we'll refer to as
+an *origin server*), this incurs inefficiency.
+This inefficiency can be overcome by placing a *Web cache* or *proxy server* in between
+clients and the origin server. Clients send their request to the proxy server which
+maintains a cache of recently requested. If the data are in the cache, the proxy server
+responds to the client's request. If the data are not in the cache, the proxy server
+requests the data from the origin server, caches it, and responds to the client's request.
+
+Proxy servers are typically purchased by large ISPs or organizations to which many clients
+connect. For example, a university may host its own proxy servers through which requests 
+from its internal network are filtered. The use of the cache reduces traffic on the 
+outbound connection to the internet which saves money in the long run.
+
+When a request comes in from a client, the proxy server may a *conditional GET* 
+to the origin server to check that its cached data are still valid.
+In the conditional GET, an additional field - `If-modified-since` containing the
+`Last-modified` value of the data when it was last received - is included in the
+header. The origin server then checks the modification date of the data requested
+and, if it has not changed since it was cached, returns a tiny 304 response telling
+the proxy server that it is safe to respond to the client with the cached data.
+
+## File Transfer: FTP
+
+Controlling the file system of a remote machine often uses FTP (or its secure version,
+*SFTP*) which is similar to HTTP but with some important differences:
+
+* FTP uses two TCP connections in parallel: The persistent *command connection*
+  and the non-persistent *data connection*. This separation of commands from
+  data is called *out-of-band* whereas protocols that combine commands and data
+  (e.g., HTTP, SMTP) are *in-band*.
+* The command connection is used to transmit user credentials, and FTP maintains
+  state about the connected user (e.g., their current directory). This limits
+  concurrency in FTP unlike with stateless protocols such as HTTP.
+
+FTP messages, like HTTP, are in human-readable ASCII. 
+Requests typically start with a four letter command (USER, PASS, LIST, RETR, SEND) with
+zero or more arguments.
+Responses typically start with a three-digit code with explanatory text following.
+
+## Electronic Mail
+
+The electronic mail (e-mail) system is composed of *user agents*, *mail servers* and the 
+*Simple Mail Transfer Protocol (SMTP)*.
+
+Every user (email address) has a mailbox on their mail server that manages the emails sent to
+and from the user. In particular, it puts messages in a queue for sending or receiving thus
+handling data connection problems between mail servers (asynchronous communication).
+
+Like HTTP and FTP, SMTP is text based but in the case of SMTP any binary data must also be 
+converted to 7-bit ASCII.
+
+The important part is how the mail servers communicate (directly) with each other via SMTP 
+where the sender acts as client and the recipient acts as server.
+
+After the TCP connection is initialized, 
+communication starts with an introductory handshake
+
+```
+S: 220 hamburger.edu
+C: HELO crepes.fr
+S: 250 Hello crepes.fr, pleased to meet you
+```
+
+followed by a series of back-and forth exchanges.
+First, the client announces that it has mail to send
+
+```
+C: MAIL FROM: <alice@crepes.fr>
+S: 250 alice@crepes.fr ... Sender ok
+```
+
+and to whom the mail is directed
+
+```
+C: RCPT TO: <bob@hamburger.edu>
+S: 250 bob@hamburger.edu ... Recipient ok
+```
+
+and that it has data to send
+
+```
+C: DATA
+S: 354 Enter mail, end with "." on a line by itself
+```
+
+and then the body of the email
+
+```
+C: Do you like ketchup?
+C: How about pickles?
+C: .
+S: 250 Message accepted for delivery
+```
+
+and then ends the exchange
+354 Enter mail, end with "." on a line by itself
+```
+C: QUIT
+S: 221 hamburger.edu closing connection
+```
+(Apart from my "S:" and "C:" prefixes, this is what is sent, verbatim.)
+
+SMTP uses persistent connections such that many messages can be sent in one TCP connection.
+SMTP is also considered a *push protocol*, initiated by the sender, 
+rather than a *pull protocol* initiated by the recipient (as in HTTP, for example).
+As a result, SMTP is used to push the message from the sender's user agent
+to the sender's mail server, and also to push the message from the sender's mail
+server to the recipient's mail server. Because the recipient typically *pulls* 
+mail from their server, different Mail Access Protocols are used for this (see below).
+
+The user agent, when drafting an email will add header lines to the message including
+the sender, the recipient and a subject line (none of which correspond to anything
+in SMTP, and some of which - the sender, for example - are presumably used to spoof 
+email addresses).
+
+When binary data are attached to the email using 
+*Multipurpose Internet Mail Exchange* extensions,
+additional headers such as `Content-Type: image/jpeh` and 
+`Content-Transfer-Encoding: base64` indicate
+how the textual data should be turned back into binary, and what the binary data
+represent (e.g., a JPEG that could be displayed by the user agent).
+
+The receiving mail server also attaches a header of its own to messages, 
+showing from which mail server the message came and the path the message
+took from sender to receiver (intermediate mail servers may be involved).
+
+Using mail servers rather than sending directly between user agents makes the 
+process more robust by enabling message queueing on servers that are always on
+(unlike the user agents) and facilitates asynchronous communication at the
+heart of email.
+
+### Mail Access Protocols
+
+Pulling mail from the recipient's mail server typically uses one of the
+two most popular protocols: *Post Office Protocol v3 (POP3)* or 
+*Internet Mail Access Protocol (IMAP)*.
+
+POP3 is the simpler of the two and follows three stages: 
+authorization (agent supplies username and password), 
+transaction (mail server responds to requests from the agent), 
+and update (delete messages from the server if requested).
+
+The commands used in the transaction phase are simply `list`, `retr`, `dele` and `quit`
+with obvious interpretations. POP3 agents can be set up to mark messages for deletion
+upon retrieval or to keep them on the server for posterity. Messages are deleted by
+the server after the transaction phase is complete.
+
+Note that deleteing messages means that they will exist only on the agent that
+received them and will be unavailable to other agents.
+
+The more modern IMAP protocol is much more powerful and allows users to organize emails 
+(e.g., into folders) on the server itself rather than just on their agent. This
+requires IMAP to store user information across sessions.)
+
+## DNS - The Internet's Directory Service
+
+Internet hosts are identified by their unique *IP address*: four numbers in the
+range 0-255, separated by a period, such as 121.7.13.187. Since these are hard to 
+remember, we need a system for retrieving this hard-to-remember number from an
+easy-to-remember name (such as "google.com" or "bbc.co.uk"). This is the purpose
+of the *Domain Name System*.
+
+DNS is "a distributed database implemented in a hierarchy of *DNS servers*"
+and also an application layer protocol that allows hosts to query the database.
+
+Because this system is used by all other protocols (HTTP, FTP, SMTP, and many more)
+it is considered a core function of the internet rather than an application with which
+a user might interact.
+
+DNS also provides:
+
+* host aliasing: a host with the hostname server1.google.com can have the aliases
+  www.google.com and google.com. DNS can map memorable aliases to complex hostnames
+  as part of its resolution.
+* mail server aliasing: in the same way, an alias can be mapped to a mail server, even
+  when the alias is used by other servers in the same network.
+* load distribution: an alias can be mapped to many hostnames in rotation such that
+  requests are sent to (and handled by) different hosts in the network, thus spreading
+  the load rather than directing all traffic to a single host server.
+
+### How DNS Works
+
+To handle the scale of the modern internet, DNS must be distributed and in a scalable way;
+it cannot be run on a single server (or cluster of servers).
+
+Instead, there are four types of DNS server:
+
+* The Local DNS server is the first point of contact to which the DNS request, and is often
+  on the same network as the requesting host.
+* An authoritative DNS server knows the addresses of all the hosts for a given domain
+  (e.g., visionomy.com). Large institutions host their own; everyone else uses their ISP's.
+* A Top Level Domain server knows the addresses of all the authoritative DNS servers
+  for a given TLD (e.g,. .com)
+* A Root DNS server knows the addresses of all the TLD servers.
+
+A DNS request then proceeds roughly as follows:
+
+* The host makes the request to its Local DNS server.
+* The Local DNS server sends the request to a Root server who responds with the address of a TLD server.
+* The Local DNS server then sends the request to the TLD server who responds with the address of an authoritative server
+* The Local DNS server then sends the request to the authoritative server who responds with the address of the desired host.
+
+As usual where lots of requests/responses are made, caching is used extensively to return answers that
+an intermediate DNS server already knows. Cached queries are usually discarded after a period of time
+(often two days).
+
+### DNS Records and Messages
+
+The DNS database is composed of *resource records (RRs)* that are a four-tuple:
+(Name, Value, Type, TTL).
+
+* If Type=A (an *A Record*), Name is the hostname and Value is the IP Address..
+* If Type=NS (an *NS Record*), Name is a domain and Value is the address of an authoritative name server.
+* If Type=CNAME (a *CNAME Record*), Name is the (easy-to-remember) alias
+  and Value is the (easy-to-forget) canonical hostname.
+* If Type=MX (an *MX Record*), Name is the (easy-to-remember) alias
+  and Value is the (easy-to-forget) canonical mail server hostname.
+
+(TTL is the *time-to-live* after which time a cached record should be deleted.)
+
+Queries and responses use the same message format (details omitted here) that indicates (among other things):
+
+* whether the message is a query or a response
+* what kinds of address (A, NS, CNAME, MX) is being queried and for whom
+* the answer (or answers, when cached data is available) to the query
+
+The nslookup tool allows you to query the DNS database yourself if you feel curious.
+
+Adding records into the DNS database is done by a *registrar* to whom you pass your
+records and they add them after checking that the data are correct.
+
+## Peer-to-Peer Applications
+
+(Of only passing interest.)
+
+## Socket Programming with TCP/UDP
+
+(Java Examples using TCP libraries to exchange data.)
 
 # Transport Layer
 Processes pass *messages* from the Application layer to the Transport layer via a socket. 
