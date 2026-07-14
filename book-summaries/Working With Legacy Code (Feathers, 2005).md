@@ -255,6 +255,22 @@ Extremely long (hundreds or thousands of lines) "Monster" Methods present a part
 
 Slightly less care is required if you have an automated refactoring tool that you can trust. (Most IDEs have one nowadays; if yours doesn't then switch to one that does.) When using automated refactoring tools to Extract Method, however, it is important that you use *only* the tool and make no manual changes yourself. This ensures that you can have confidence that the changes you make have already been checked (which won't be the case if you're changing code by hand yourself).
 
+## "How Do I Know That I'm Not Breaking Anything"?
+
+Most manufactured artifacts wear out over time. Not code. Code will run and run and run until it is changed. But even the tiniest change can break the code with ease. Ensuring that the changes you make do not break anything is an essential skill (especially without tests, which is what Legacy Code is).
+
+This can be achieved with a few key discplines:
+
+* Hyperaware Editing: get feedback that is almost continuous so that you become incredibly aware of the effects that youre changes make. Some changes in the code effect no changes whatsoever in the behaviour (e.g., adding comments); others change the behaviour dramatically. Get feedback as quickly and as often as possible to ensure you get a "feel" for what you're doing to the code's behaviour.
+* Single Goal Editing: change one thing - and only one thing - at a time in order to avoid going off on a tangent. If you spot another thing that "needs" changing, make a note to come back later and go back to the one goal you were already working on. [In my recent experience, Conventional Commits are a good incentive to maintain discipline. A commit message must be either "refactor" or "fix" or "feat", and commits that span more than one of these goals feel wrong. Splitting the commit into multiple commits resolves the problem; not working on more than one thing at a time avoids the problem in the first place.]
+* Preserve Signatures: when extracting methods, keep the signature of the new method the same as the old to reduce the risk of introducing errors here (that are very easy to introduce and more difficult to detect). Besides, extracting the method and changing the signature break the Single Goal Editing discipline.
+* Lean On The Compiler: refactor code in a way that is deliberately broken, then get the compiler to alert you (via compile-time errors) to all the other places in the code that you need to change in order to complete the refactor. Beware, however, of instances where the lack of compile-time errors simply indicates substituted behaviour, such as when meddling with the methods of a class hierarchy where deleting a subclass method simply falls back to the superclass's implementation. [This discipline also obviously only works with compiled languages.]
+* Pair Programming: sit with another developer in order to share knowledge, pick each others' brains, and act as a regulator for each other (e.g., when pursuing Single Goal Editing).
+
+## "We Feel Overwhelmed. It Isn't Going To Get Any Better"
+
+Programming should be fun, whether you do it for money or do it for love. Find the way that gets the most joy out of working the code, whether it's a pristine greenfield project or legacy code; whether it's great code or terrible code. Any combination of these scenarios can leave you either elated or deflated. One way or another will leave you elated, and it usually involves getting at least a small portion of the code under test so that you can play around with it - having fun in the process - without an overwhelming fear of breaking something. Take away the fear, and only the fun will remain.
+
 # Dependency-Breaking Techniques
 
 These are refactorings with the specific intention of making it easy to introduce tests where no tests exist.
