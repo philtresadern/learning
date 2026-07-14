@@ -253,7 +253,14 @@ Do this carefully, though \- one small step at a time.
 
 Extremely long (hundreds or thousands of lines) "Monster" Methods present a particular challenge and require special care.
 
+* Bulleted methods look like a bullet list - lots of sections of code that do different things and that should be easy to Extract Method but look out for temporary variables defined in unhelpful places
+* Snarled methods have one single, heavily indented section and lots of branching, also ripe for an Extract Method but with care.
+
 Slightly less care is required if you have an automated refactoring tool that you can trust. (Most IDEs have one nowadays; if yours doesn't then switch to one that does.) When using automated refactoring tools to Extract Method, however, it is important that you use *only* the tool and make no manual changes yourself. This ensures that you can have confidence that the changes you make have already been checked (which won't be the case if you're changing code by hand yourself).
+
+If you do insist on doing the Extract Method by hand, make sure you (a) pass in all the variables as arguments (b) give it a unique name that doesn't override an existing method and (c) check the return values.
+
+Insert sensing variables in such a way as to add (but not change) the code you are refactoring and check the state of the new variables in your tests. This will give you confidence that branches that were being visited before the refactor are still being visited after the refactor. Once the refactoring is to your satisfaction, you can remove them (and any assertions that depend on them in your tests).
 
 ## "How Do I Know That I'm Not Breaking Anything"?
 
