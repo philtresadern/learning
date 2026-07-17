@@ -8,7 +8,11 @@ Feathers defines "legacy code" as anything that is not sufficiently tested, and 
 
 # The Mechanics of Change
 
+## Changing Software
+
 Whether adding a feature, fixing a bug, refactoring or optimizing, the chances are that 99%+ of the behaviour should be unchanged. (In refactoring, the behaviour should not change at all.)
+
+## Working with Feedback
 
 Tests \- and unit tests in particular \- act as a vice that clamp the code in place while you work on it. They alert you to when behaviour has changed when it should not have so that you can make the corrections to get it back in working order quickly.
 
