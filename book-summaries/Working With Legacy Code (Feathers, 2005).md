@@ -6,6 +6,8 @@
 
 Feathers defines "legacy code" as anything that is not sufficiently tested, and therefore difficult to change. This might be the case for old code, but it can also be the case for fresh-off-the-press code.
 
+# The Mechanics of Change
+
 Whether adding a feature, fixing a bug, refactoring or optimizing, the chances are that 99%+ of the behaviour should be unchanged. (In refactoring, the behaviour should not change at all.)
 
 Tests \- and unit tests in particular \- act as a vice that clamp the code in place while you work on it. They alert you to when behaviour has changed when it should not have so that you can make the corrections to get it back in working order quickly.
@@ -56,6 +58,8 @@ There are many refactoring tools available, though you should use them with care
 The xUnit framework is the most common for testing and is available in most languages (e.g., unittest in Python).
 
 FIT (and fitnesse) are both web-based testing frameworks where tests cases are defined in HTML which is parsed by the framework and results written to HTML.
+
+# Changing Software
 
 ## "I don't have much time and I have to change it"
 
