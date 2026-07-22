@@ -852,7 +852,7 @@ fragments. The last fragment in a datagram sequence takes a flag value of 0 wher
 An unfragmented datagram has a flag of 0 but also a fragmentation offset of 0 (whereas the final fragment would have a flag of 0
 and a nonzero offset). Fragmentation is useful but puts a burden on routers, and can also be a source of malicious behaviour.
 
-## IPv4 Addressing
+### IPv4 Addressing
 
 An IP address is technically associated with an *interface* rather than with the *host* or *router* containing that interface.
 The interface is the boundary between the physical connection and the logical host. (An ethernet port would be one interface; a
@@ -912,7 +912,7 @@ manage LANs without exhausting IP address pools. Peer-to-Peer also does not play
 between a labelled source and a labelled destination, and NAT messes with the source IDs (IP address and port). UPnP patches this
 by providing a way for hosts to request a specific mapping that they can use to establish the TCP connection instead.
 
-## Internet Control Message Protocol (ICMP)
+### Internet Control Message Protocol (ICMP)
 
 A special type of message sent at the Network layer is the *Control Message*, used to indicate conditions and errors that may
 arise during transmission. Each ICMP packet contains one of 13 (type, code) pairs, each associated with a specific message
@@ -928,7 +928,7 @@ port unreachable". At this point, Traceroute knows it has found the endpoint of 
 packets include information containing the IP address of each router that returned the packet, and the round trip time to each
 router.
 
-## IPv6
+### IPv6
 
 Based on experience with IPv4 and the limited number of IP addresses, IPv6 is taking over. IPv6 increases the bit-length of addresses
 to 128-bit (enough for every grain of sand to have an IP address) and ditches some of the less well-liked fields in the header.
@@ -947,3 +947,25 @@ Finally, a protocol called IPsec (used in VPNs) sits between TCP/UDP and IP, sec
 In a nutshell TCP/UDP passes its segment to IPsec that encrypts it and wraps it with a header, and passes this datagram to IP which wraps it 
 with the usual headers. At the receiving end, IPsec reverses the process to extract the sensitive data. (This will be covered in more
 detail later.)
+
+## Routing Algorithms
+
+The other main function performed by a router is, unsurprisingly, determining the best route between the two hosts. 
+
+Hosts are attached to the *default router* (or *gateway* or *first-hop router*): the sending host to the *source router* and the receiving host to the *destination router*. 
+
+The network in between hosts is represented as a graph with Nodes (routers) and Edges (links). Each edge is associated with a cost (whose definition is of no concern here) and nodes *x* and *y* are said to be *neighbours* if (*x*,*y*) is in the set of edges of the graph. The purpose of the routing algorithm is to find the path from source to destination that minimizes the sum of the edge costs, known as the *least-cost path*.
+
+Routing algorithms come in two flavours:
+
+* in a *global routing algorithm*, often referred to as a *link-state (LS) algorithm* knowledge of the entire graph is required to compute the least-cost path. This means that it can be computed on any node that has this information.
+* in a *decentralized routing algorithm* each node computes the next step based on very localized information about the current path.
+
+Algorithms can also be categorized as *static* (recomputed infrequently, perhaps manually) or *dynamic* (recomputed frequently, triggered automatically, susceptible to loops and oscillation), and as *load-sensitive* (link costs increase with network traffic) or *load-insensitive* (link costs are not related to current traffic loads).
+
+### The Link-State (LS) Algorithm
+
+### The Distance Vector (DV) Algorithm
+
+## Routing in the Internet
+
