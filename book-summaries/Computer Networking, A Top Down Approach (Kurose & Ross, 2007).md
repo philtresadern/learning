@@ -2,7 +2,7 @@
 
 The internet is a network of *end systems* or *hosts* - computers, smart phones, web cams, cars,
 and so on. 
-Hosts are connected via *packet switches* conected with *communication links*. 
+Hosts are connected via *packet switches* connected with *communication links*. 
 Data is sent along a *path* or *route* between hosts in *packets* at a specific *transmission rate*.
 Packet switches are typically either *routers* (that have an IP address) or 
 *link-layer switches* (that do not have an IP address).
