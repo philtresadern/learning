@@ -965,7 +965,15 @@ Algorithms can also be categorized as *static* (recomputed infrequently, perhaps
 
 ### The Link-State (LS) Algorithm
 
+In a *Link-State (LS)* algorithm, the source node knows the shortest distance (and corresponding route) to *every* other node in the network. Since this includes the destination node, it knows how to get there with the lowest cost. One example of an LS algorithm is Dijsktra's algorithm whereby nodes are added to the neighbourhood of the source node one at a time with the distance-to-source for every node updated at every iteration, where there are as many iterations as there are nodes. 
+
+One downside of an LS algoithm (and many other algorithms) is the risk of oscillations as the shortest path is updated repeatedly, switching between two or more paths that are shortest at any given time. This is especially the case where link costs are associated with traffic load that the algorithm controls. This can be partly countered by running the algorithm at random times so that nodes are unsynchronized, though they have a nasty habit of synchronizing themselves.
+
 ### The Distance Vector (DV) Algorithm
+
+In an implementation of the *Distance Vector (DV) Algorithm*, each node maintains a state that includes: the estimated minimum distance from itself to every other node (the distance vector, DV) and the DV for each of its direct neighbours. Each node sends its DV to each of its neighbours, each of whom uses it to update their estimate of the shortest distance. If that estimate changes, then they send their updated DV to each of their neighbours (and so on and so forth). Updates needn't be sent synchronously and can be applied at any time, and DVs settle into a steady ("quiescent") state after a certain number of iterations. No more updates will be applied until one of the costs to an immediate neighbour changes, at which point updates will be delivered once again.
+
+
 
 ## Routing in the Internet
 
