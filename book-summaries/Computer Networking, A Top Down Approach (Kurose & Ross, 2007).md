@@ -1048,3 +1048,19 @@ Similar policies can determine which backbone networks are permitted to carry tr
 
 ## Broadcast and Multicast Routing
 
+Sometimes it is desirable to send a packet to *all* other nodes in the network (*broadcast routing*) or just to *some* other nodes in the network (*multicast routing*) rather than one-to-one communication (*unicast routing*).
+
+### Broadcast Routing Algorithms
+
+The simplest approach to reaching all other nodes would be for the source to send the same packet N times, each with a different destination address (an *N-way unicast*). This is obviously inefficient, though efficiency can be achieved if the duplication occurs further along the route by other routers. Moreover, knowing the addresses of every destination adds complexity to the algorithm. Finally, broadcasting is used in the LS algorithm to determine routes to every destination yet the N-way unicast assumes that the routes are already known (a form of circular dependency).
+
+*Flooding* is one approach to resolving the inefficiency argument whereby the source sends the broadcast packet only to its immediate neighbours. Each neighbour then sends the packet to each of its immediate neighbours (except the originator) and so on. This, however, falls down when there are loops in the network such that packets can be forwarded indefinitely or, worse, continue being duplicated without being consumed until the traffic grinds to a halt (a *broadcast storm*).
+
+*Controlled flooding* applies rules at every node to decide whether to forward (flood) the packet or drop it. One implementation (*sequence-number-controlled flooding*) adds the source's address plus a *broadcast sequence number* to the packet, and routers drop any packets they have already flooded. Another implementation (*reverse path flooding*) will only flood a packet that is received on a link that is on the shortest path back to the source, knowing that a packet received on any other link will be a duplicate of the one that has been (or will be) received along the shortest path.
+
+A third implementation computes the *minimum spanning tree (MST)* of the network that leaves no node unconnected but also contains no loops, at minimal cost. This avoids the problems that come with loops (redundant packets and broadcast storms) and is efficient in that the MST need be computed only once. One algorithm for computing the MST is the *centre-based approach* whereby one node is selected as the centre (or root) of the tree and other nodes send *tree-join* messages to it, grafting each path-to-root to the tree.
+
+In practice, sequence-number-controlled flooding is a popular choice, often augmented with a time-to-live (TTL) or equivalent field for *limited-scope flooding*.
+
+### Multicast
+
