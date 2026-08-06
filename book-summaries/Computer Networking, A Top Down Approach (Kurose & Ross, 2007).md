@@ -979,7 +979,7 @@ These two classes of algorithm (LS and DV) are essentially the only ones in use 
 
 ### Hierarchical Routing
 
-As the number of nodes in a network grows, the resource requirements of these algorithms becomes prohibitive. Furthermore, the organisation that owns a router might want control over how that router is managed (e.g., what routing algorithm it uses).
+As the number of nodes in a network grows, the resource requirements of these algorithms becomes prohibitive. Furthermore, the organisation that owns a router might want *administrative autonomy* over how that router is managed (e.g., what routing algorithm it uses).
 
 Clusters of nodes belonging to the same organisation are therefore grouped together in an *Autonomous System (AS)* that can comprise one or more subnets (in the CIDR addressing sense). Routers belonging to the same AS must share the same *intra-autonomous system routing protocol* to pass packets among each other. Any router within an AS that connects to routers in other AS's is known as a *gateway router*, and gateway routers must share the same *inter-autonomous system routing protocol* (which happens to be BGP4) to pass packets between AS's. Routers within an AS must therefore maintain knowledge of to which gateway router in their AS they need to send packets in order to reach a given destination. Where more than one gateway router lies on the path to a given destination, the "nearest" one (with the smallest cost) is usually chosen (known as *hot-potato routing*).
 
@@ -987,6 +987,19 @@ Routers within an AS pass routing information among each other but not outside t
 
 ## Routing in the Internet
 
+Intra-AS routing protocols -- also known as *interior gateway protocols* -- move packets within an AS, and are dominated by the *Routing Information Protocol (RIP)* and *Open Shortest Path First (OSPF)* protocol. 
+
 ### Intra-AS Routing in the Internet: RIP
 
-Intra-AS routing protocols -- also known as *interior gateway protocols* -- move packets within an AS, and are dominated by the *Routing Information Protocol (RIP)* and *Open Shortest Path First (OSPF)* protocol. RIP is a DV algorithm that maintains the distance vector from each node to other *subnets* (rather than nodes) in the AS and is limited to only 15 "hops". Neighbours exchange a *RIP response message* (or *RIP advertisement*) approximately every 30 seconds, containing distance information to no more than 25 subnets.  
+RIP is a DV algorithm that maintains the distance vector from each node to other *subnets* (rather than nodes) in the AS where each link is given a cost of 1 (counting "hops"), and the algorithm is limited to only 15 "hops". Neighbours exchange a *RIP response message* (or *RIP advertisement*) approximately every 30 seconds, containing distance information to no more than 25 subnets. If no advertisement is received from a neighbour after 180 seconds, the neighbour is considered unreachable and routing tables are updated and shared with other neighbours.
+
+Routing information to an individual node can also be requested between neighbours via UDP port 250. This use of the Transport layer by a Network layer algorithm is possible because RIP is actually an Application layer entity.
+
+### Intra-AS Routing in the Internet: OSPF
+
+OSPF is an LS algorithm, typically used by upper-tier ISPs, in which neighbours broadcast their routing information to all other nodes in the AS. The network manager is responsible for setting link costs (e.g., to reflect bandwidths of links) such that administrative autonomy is retained. The algorithm runs strictly in the Network layer and must implement its own equivalent to Transport mechanisms such as reliable message transfer.
+
+OSPF was intended as a successor to RIP and has a number of advances over RIP:
+
+* Security: exchanges can be authenticated to ensure that new routers can't simply be added to the network and mess up the routing tables. Passwords are either shared (and trasmitted in plaintext which isn't very secure) or the sending router scrambles the message, adds the MD5 hash, and the receiving router computes the MD5 of the scrambled message itself and compares it with the received MD5 to ensure that the sending router had the correct credentials.
+* 
