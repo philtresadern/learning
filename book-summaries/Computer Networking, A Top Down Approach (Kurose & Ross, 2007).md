@@ -1002,4 +1002,49 @@ OSPF is an LS algorithm, typically used by upper-tier ISPs, in which neighbours 
 OSPF was intended as a successor to RIP and has a number of advances over RIP:
 
 * Security: exchanges can be authenticated to ensure that new routers can't simply be added to the network and mess up the routing tables. Passwords are either shared (and trasmitted in plaintext which isn't very secure) or the sending router scrambles the message, adds the MD5 hash, and the receiving router computes the MD5 of the scrambled message itself and compares it with the received MD5 to ensure that the sending router had the correct credentials.
-* 
+* Multiple same-cost paths allow packets to take a different route if that route is joint shortest path
+* Unicast and multicast support is included (see below)
+
+One key advantage of OSPF is that an autonomous system can be subdivided again into *areas* for hierarchical operation. Each area consists of one *area border* router and a number of *internal routers*. Every area border router is also a member of the *backbone area* through which all messages pass. The backbone area also contains zero or more *backbone routers* that route messages between area border routers and from area border routers to the *boundary router* that connects the AS to other ASs.
+
+Link costs determine the path taken from one node to another in the routing table. It is possible, however, that certain paths are preferred over others (for an unlimited number of reasons) and so the network manager can set the weights in order to achieve the desired routing, in a reversal of cause and effect (the routes determine the link costs).
+
+### Inter-AS Routing: BGP
+
+The *Border Gateway Protocol v4* (*BGP4* or simply *BGP*) is the *de facto* standard for routing between ASs. It gives each AS the means to:
+
+* Obtain subnet reachability information from neighbouring ASs
+* Propagate the reachability information to all routers internal to the AS
+* Determine "good" routes to subnets based on the reachability information and on AS policy.
+
+Crucially, BGP is the mechanism that enables subnets to advertise their own existence so that other subnets can find and route traffic to them.
+
+BGP is complex and you'd need a lot of experience to understand it fully, but here we present a brief overview of its operation.
+
+Pairs of connected routers share a semipermanent TCP connection (port 179) across which they send BGP messages, collectively known as a *BGP session*. Routers that connect two ASs employ *external BGP (eBGP)* sessions; routers within the same AS employ *internal BGP (iBGP)* sessions. Any two routers sharing a BGP session are called *BGP peers*.
+
+BGP advertises the reachability of subnets by their CIDR prefix, and can aggregate subnets that have N prefix bits in common (with prefix/N). Gateway routers can advertise reachability information to other routers internal to the AS and also to gateway routers in other ASs (which will then advertise the reachability to its internal routers).
+
+Each AS (or at least most of them) comes with an *Autonomous System Number (ASN)* that is assigned by ICANN. When BGP advertises a prefix across a BGP session, it attached *BGP attributes* that turn the advertisement into what is termed a *route*. 
+
+*AS-PATH* (autonomous system path) is an attribute that contains the sequence of ASNs traversed in order to reach the current AS, which will append its ASN to the path before advertising it to another AS. This enables an AS to detect when a route has looped back to itself and reject the advertisement.
+
+*NEXT-HOP* bridges the inter-AS and intra-AS routing algorithms, pointing the intra-AS algorithm to the gateway router that directs traffic to a given subnet (advertised by the inter-AS algorithm).
+
+These two attributes are also used to choose between two alternative routes to the same subnet.
+
+When a router receives an advertisement, it uses an *import policy* to decide whether to accept or filter the route (e.g., in cases where it does not want to send traffic through a specific AS or knows of a better route to the subnet already).
+
+When choosing between several possible routes to a subnet, BGP will (in order):
+
+* Eliminate all routes but those with the highest preference value (a BGP attribute optionally added by a router)
+* Eliminate all routes but those with the shortest AS-PATH
+* Eliminate all routes but those with the closest NEXT-HOP router
+* Use BGP identifiers to choose a route from the set that remains
+
+Routing policies can also be used to enforce specific behaviours. For example, an AS that should not forward traffic between neighbouring ASs but strictly produces or consumes traffic is known as a *stub network* and is prevented from forwarding packets by advertising no routes to other ASs, even if there are physical connections in place.
+
+Similar policies can determine which backbone networks are permitted to carry traffic destined for other backbone networks (e.g., between networks belonging to different ISPs). These policies are usually agreed in private between ISPs to ensure that nobody is given a "free ride."
+
+## Broadcast and Multicast Routing
+
