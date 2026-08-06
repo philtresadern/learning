@@ -1064,3 +1064,15 @@ In practice, sequence-number-controlled flooding is a popular choice, often augm
 
 ### Multicast
 
+Unicast requires the IP address of the sole recipient (easy); broadcast requires no IP address at all (also easy); *multicast* requires a packet to go to many but not all destinations (not so easy). Using a list of IP addresses is both inefficient and also assumes that the sender has the IP address of every recipient (which it may not).
+
+The answer is to use *address indirection* where a single IP address is used for every member of the *multicast group* (i.e, the group has an IP address of its own). This group indirection is managed by the *Internet Group Management Protocol* and *multicast routing protocols*.
+
+IGMP (v3) covers communication between an edge (first-hop) router and the hosts in its LAN. Packets destined for the group have an IP protocol number of 2, and the router periodically sends out a *membership_query* messages to all connected hosts, to which each host responds with a *membership_report* listing the groups to which it belongs (or to which it wants to belong). A *leave_group* message may be sent by a host to terminate membership of a group, or it may simply omit the group from its *membership_report* response (so called *soft state* management).
+
+The multicast routing protocol then ensures that messages are delivered from a source in the group to every router connected to group members (and not to routers with no connected group members). This is commonly achieved again with a spanning tree where only group-connected routers (or intermediate routers necessary to complete the tree) are included. The tree may be either centre-based (a single tree) or source-based (one tree per source), the latter of which may be *pruned* to remove routers that are not connected to any group members by sending "prune" messages upstream.
+
+In practice, Network layer multicasting is used but not very much; Application layer multicasting (e.g., peer-to-peer networking) is preferred at the time of publication.
+
+# The Link Layer and Local Area Networks
+
